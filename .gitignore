@@ -1,0 +1,10 @@
+# Test and tooling dependencies, reinstalled by `npm ci` in CI.
+# Never commit it: it is thousands of files of someone else's code, and it makes
+# a one-line change in the diff impossible to review.
+node_modules/
+# package.json and package-lock.json are COMMITTED: CI installs from them via
+# `npm ci`, and neither is a secret.
+
+# Release zips built by `npm run package`. The release attaches them; the
+# repository holds the tree they are built from.
+dist/

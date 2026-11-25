@@ -1,0 +1,30 @@
+{
+  "name": "cis_bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cisoko product API: one set of exports for money, items, jobs, doors and targets on every framework.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "repository": "github:cisoko-net/cis_bridge",
+  "scripts": {
+    "lint": "node tools/lint.js",
+    "check:workflow": "node tools/check-workflow.js",
+    "test": "node test/run.js",
+    "test:syntax": "node tools/syntax.js",
+    "test:api": "node tools/validate-api.js --api api.lua --resource .",
+    "test:mutate": "node tools/mutate.js",
+    "test:api-selftest": "node tools/validate-api.js --selftest",
+    "test:all": "npm run check:workflow && npm run check:counts && npm run lint && npm run test:syntax && npm run test && npm run test:api-selftest && npm run test:api && npm run check:frozen && npm run docs:check && npm run audit:docs",
+    "docs": "node tools/gen-docs.js",
+    "docs:check": "node tools/gen-docs.js --check",
+    "check:counts": "node tools/check-counts.js",
+    "check:frozen": "node tools/check-frozen.js",
+    "package": "node tools/package.js",
+    "audit:docs": "node tools/audit-docs.js"
+  },
+  "devDependencies": {
+    "fengari": "^0.1.5"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

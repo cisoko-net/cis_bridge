@@ -1,0 +1,36 @@
+-- Your own adapters, for a server whose framework, inventory, doors, target,
+-- billing or appearance resource no built-in adapter fits: one whose exports
+-- were renamed or changed, or a resource cis_bridge has no adapter for.
+--
+-- This file ships empty and loads in both realms as a shared script: after
+-- the framework and appearance adapters, before the inventory, doors, target
+-- and billing ones (client and server scripts load after shared ones), and
+-- before the bridge reads them. A built-in adapter loaded later keeps an
+-- adapter registered here under a new name, but replaces one that reuses a
+-- built-in name. Write the adapter here:
+--
+-- 1. Copy the built-in adapter closest to yours, for example
+--    adapters/framework/qbcore.lua, into this file.
+-- 2. Give it a new name, and the name of your resource:
+--        name = 'my_qbcore',
+--        resource = 'my-core',
+--    and register it under that name on its last line:
+--        CisBridgeFrameworks.my_qbcore = Adapter
+-- 3. Change only the calls your server renamed, for example
+--        exports[Adapter.resource]:GetPlayer(src)
+--    becomes
+--        exports[Adapter.resource]:FetchPlayer(src)
+-- 4. Wrap a copy of an inventory or doors adapter (server only) in
+--        if IsDuplicityVersion() then ... end
+--    and a target or billing adapter (client only) in
+--        if not IsDuplicityVersion() then ... end
+--    because this file loads in both realms. Framework and appearance
+--    adapters already hold both halves.
+-- 5. Pick it in server.cfg. A custom adapter is never auto-detected:
+--        setr cis_bridge:framework my_qbcore
+-- 6. Restart the server and run `cis_bridge report` and `cis_bridge test` in
+--    the server console. The report row says `forced by convar`; the test
+--    checks your adapter like every built-in one.
+--
+-- Updating cis_bridge replaces this file with the empty one: keep a copy of
+-- yours and put it back after each update.

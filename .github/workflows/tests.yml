@@ -1,0 +1,238 @@
+name: tests
+
+# Pure-Lua suites only. They run under fengari with no FiveM server and no
+# game assets. They run on a push to main and on every pull request, so a pull
+# request is tested once, not once for its branch push and again for the PR.
+#
+# The live integration harness needs a running fxserver and is run by hand on a
+# test instance, not here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# The suites only read the tree.
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: unit + api contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: The workflow's own shell blocks parse
+        # A `run:` block can be valid YAML and invalid bash; that fails on the
+        # runner, not locally. This runs `bash -n` over every block.
+        run: npm run check:workflow
+
+      - name: Install Lua 5.4 and luacheck
+        # Both are luarock/apt packages rather than npm ones, so `npm ci` cannot
+        # bring them. luacheck is pinned, because a linter that drifts under the
+        # tests makes a red build ambiguous: was the code wrong, or was the
+        # tool?
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq lua5.4 luarocks
+          sudo luarocks install luacheck 1.2.0
+          luac5.4 -v
+          luacheck --version
+
+      - name: Required tools are on PATH
+        # Every step below needs these commands. If the install above did
+        # nothing, the checks would fail on every file at once or pass without
+        # looking at anything, and either reads as a verdict on the code.
+        run: |
+          for tool in luacheck luac5.4 node; do
+            if ! command -v "$tool" >/dev/null 2>&1; then
+              echo "::error::$tool is not on PATH -- the checks below did not run"
+              exit 1
+            fi
+          done
+          echo "All tools present."
+
+      - name: The documentation states the real assertion count
+        # The assertion count quoted in the docs, and the suite count, must match
+        # what the suites report. This runs them, sums the result, and fails when
+        # a file that quotes the number disagrees.
+        run: npm run check:counts
+
+      - name: Lint
+        run: npm run lint
+
+      - name: The luacheck config itself must parse
+        # A `.luacheckrc` that fails to load is not an error in most lint
+        # setups -- luacheck falls back to its defaults, which means every
+        # global this resource defines is reported as undefined and every
+        # FiveM native it calls is reported as an undefined global. That is
+        # hundreds of findings against code that is fine, and the instinct is
+        # to delete the config rather than read the error.
+        #
+        # So it is parsed explicitly here, before the lint that depends on it.
+        # Parsed with `load`, not executed: the config assigns globals and
+        # indexes a `files` table that only luacheck provides, so running it
+        # under a stock Lua would fail on a line that is correct.
+        run: |
+          lua5.4 -e 'assert(loadfile(".luacheckrc"))' \
+            && echo ".luacheckrc parses" \
+            || { echo "::error::.luacheckrc does not parse -- lint would silently fall back to defaults"; exit 1; }
+
+      - name: Syntax check
+        run: npm run test:syntax
+
+      - name: Run the test suites
+        # 11 suites, each in a fresh Lua state. 2659 assertions.
+        run: npm test
+
+      - name: Validate api.lua against the registered surface
+        # api.lua is a contract, not a comment. The validator reads what the
+        # resource actually registers -- names and parameter lists, out of the
+        # source -- and fails on the difference.
+        run: npm run test:api
+
+      - name: Prove the api.lua validator still rejects drift
+        # A validator that has only ever been seen to pass has not been tested.
+        # This asserts the real manifest is clean AND that each deliberately
+        # broken fixture in test/api/broken/ still fails with the diagnostic it
+        # was built to trigger. Delete a fixture and this step fails.
+        run: npm run test:api-selftest
+
+      - name: The frozen 1.x surface has not moved
+        # test:api proves api.lua matches the code, but a rename made in both
+        # places at once is still consistent. test/frozen.json pins the exports,
+        # events and reason codes a product built on 1.0.0 depends on; this
+        # fails when one of them goes away or changes shape before 2.0.0.
+        run: npm run check:frozen
+
+      - name: The generated API reference is current
+        # API.md is written from api.lua and from what the resource actually
+        # registers, so a hand-edited copy is a copy that is already wrong.
+        # `npm run test:api` proves the contract matches the code; this proves the
+        # documentation of the contract still matches the contract.
+        run: npm run docs:check
+
+      - name: The documentation tells the truth
+        # api.lua matches the source, and API.md is what the generator would
+        # write -- neither asks whether the PROSE is right, and the prose is
+        # where documentation actually fails.
+        #
+        # This asserts that every export is named in all three documents, that
+        # the realms match the manifest sections that load them, that a
+        # deprecated export is not labelled stable anywhere, that every config
+        # key the code reads is in the table, that every command the runbook
+        # tells an operator to type is actually registered, and that the README's
+        # table of targets accounts for every adapter file on disk.
+        run: npm run audit:docs
+
+      - name: Fail if the exports binding regresses
+        # An export proxy is `function(self, ...)`, so a bracket-form call such as
+        # `exports['x']['Fn'](...)` shifts every argument one slot left and corrupts
+        # the API (docs/V1.md; adapters call with a colon). The pattern matches the
+        # CALL shape rather than a quote style, so a double-quoted regression is
+        # caught too. Comment lines are excluded so documentation of the pattern
+        # does not trip it. A call whose first argument IS the exports table is the
+        # bound form (server/lib.lua forwards by name that way), so it is excluded
+        # too.
+        run: |
+          hits=$(grep -rnE 'exports\[[^]]+\]\[[^]]*\]\(' --include=*.lua . \
+                 | grep -vE ':[[:space:]]*--' | grep -vE '\]\(exports\[' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Unbound exports call found. Pass the exports table as the first argument (see the header of the file that tripped it)."
+            echo "$hits"
+            exit 1
+          fi
+          echo "No unbound exports calls found."
+
+      - name: No third-party host in the shipped source
+        # A hardcoded host in the source is a supply-chain risk, not a feature.
+        run: |
+          hits=$(grep -rnE 'https?://[A-Za-z0-9.-]+\.(github\.io|githubusercontent\.com)' \
+                 --include=*.lua . | grep -vE ':[[:space:]]*--' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::Hardcoded third-party version host found in a Lua source file."
+            echo "$hits"
+            exit 1
+          fi
+          echo "No hardcoded third-party version hosts found."
+
+      - name: The isolation invariant still holds
+        # The licence argument for this resource is one file per third-party
+        # target. It only holds if nothing outside that file reaches ox_inventory,
+        # which is GPL-3.0.
+        #
+        # This asserts the CALL, not the NAME: prose, strings and comments may
+        # mention ox_inventory freely. `exports.ox_inventory` and
+        # `exports['ox_inventory']` are the two call forms.
+        #
+        # The exclusion matches `inventory/ox.lua` with either slash, because
+        # `grep -rn PATTERN .` writes ./adapters/inventory/... on the runner and
+        # the backslash form under Git Bash.
+        run: |
+          hits=$(grep -rnE "exports\.ox_inventory|exports\[['\"]ox_inventory['\"]\]" --include=*.lua . | grep -vE ':[[:space:]]*--' | grep -vE 'inventory[/\\]ox\.lua:' || true)
+          if [ -n "$hits" ]; then
+            echo "::error::ox_inventory is called outside its one adapter file."
+            echo "That breaks the GPL isolation the whole resource exists to provide."
+            echo "$hits"
+            exit 1
+          fi
+          echo "ox_inventory is called in exactly one adapter file."
+
+      - name: Lua syntax check against the real 5.4 parser
+        # fengari is a Lua 5.3 VM, so it cannot catch a 5.4-only construct; this
+        # step runs the real 5.4 parser. `lua54 'yes'` in fxmanifest.lua is an
+        # opt-in, and this keeps the opt-in honest.
+        #
+        # FiveM's backtick hash literals are valid in the Cfx Lua runtime and a
+        # syntax error to stock luac, so those files are recognised and skipped
+        # rather than failed.
+        #
+        # The skip needs both that luac reported an unexpected symbol and that
+        # the file contains a backtick literal, so a genuine syntax error is still
+        # reported. The patterns are single-quoted so the backtick stays literal.
+        run: |
+          status=0
+          while IFS= read -r f; do
+            if err=$(luac5.4 -p "$f" 2>&1); then
+              :
+            elif printf '%s' "$err" | grep -qF 'unexpected symbol near'                  && grep -qE '`[^`]+`' "$f"; then
+              echo "skip (FiveM hash literal): $f"
+            else
+              echo "SYNTAX ERROR: $f"
+              echo "$err"
+              status=1
+            fi
+          done < <(find . -name '*.lua' -not -path './node_modules/*')
+          exit $status
+  mutate:
+    name: mutation gate (every known defect must break the suite)
+    runs-on: ubuntu-latest
+    # Not on every push: it copies the tree once and runs the suite per row.
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply every mutation and require the suite to fail
+        # A mutation that still passes is a SURVIVOR and means the check it was
+        # written for does not exist. A row whose find no longer matches is
+        # STALE and means it stopped testing anything. Both fail the build.
+        run: npm run test:mutate

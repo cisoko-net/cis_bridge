@@ -1,0 +1,4 @@
+# Every text file is LF in the repository and in a checkout, on every OS.
+# docs:check and audit:docs compare bytes, so a CRLF checkout (Windows with
+# core.autocrlf=true) failed both.
+* text=auto eol=lf

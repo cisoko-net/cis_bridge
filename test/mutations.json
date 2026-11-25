@@ -1,0 +1,1507 @@
+{
+  "$comment": "Each row is a defect the suite must catch. node tools/mutate.js applies one row to a copy of the repo and requires node test/run.js (or the named check) to fail. find must match exactly once, or the row is STALE.",
+  "mutations": [
+    {
+      "id": "B01",
+      "file": "server/v1.lua",
+      "find": "    if busy[src] or detecting then return false, 'busy' end\n",
+      "replace": "    if detecting then return false, 'busy' end\n",
+      "why": "per-player lock off: two writes interleave"
+    },
+    {
+      "id": "B02",
+      "file": "server/v1.lua",
+      "find": "if busy[src] == token then busy[src] = nil end",
+      "replace": "busy[src] = nil",
+      "why": "a stale write's release clears the next player's lock"
+    },
+    {
+      "id": "B03",
+      "file": "server/v1.lua",
+      "find": "    if busy[src] == token then busy[src] = nil end\n",
+      "replace": "",
+      "why": "the lock is never released"
+    },
+    {
+      "id": "B04",
+      "file": "server/v1.lua",
+      "find": "local function locked(src, fn, ...)\n    if not validSource(src) then return false, 'bad_source' end\n",
+      "replace": "local function locked(src, fn, ...)\n",
+      "why": "the lock keys a non-player source"
+    },
+    {
+      "id": "B05",
+      "file": "server/v1.lua",
+      "find": "if not isInt(src, 1, 65535) then return false end",
+      "replace": "if not isInt(src, 0, 65535) then return false end",
+      "why": "source 0 (console) passes as a player"
+    },
+    {
+      "id": "B06",
+      "file": "server/v1.lua",
+      "find": "return GetPlayerName(src) ~= nil",
+      "replace": "return true",
+      "why": "a disconnected id passes as a player"
+    },
+    {
+      "id": "B07",
+      "file": "server/v1.lua",
+      "find": "v % 1 == 0 and ",
+      "replace": "",
+      "why": "fractional amounts and counts pass"
+    },
+    {
+      "id": "B08",
+      "file": "server/v1.lua",
+      "find": "if not isInt(amount, 1, MAX_AMOUNT) then return nil, 'bad_amount' end",
+      "replace": "if not isInt(amount, -MAX_AMOUNT, MAX_AMOUNT) then return nil, 'bad_amount' end",
+      "why": "a negative amount reaches the framework"
+    },
+    {
+      "id": "B09",
+      "file": "server/v1.lua",
+      "find": "    if sign < 0 and before < amount then return false, 'insufficient_funds' end\n",
+      "replace": "",
+      "why": "no balance floor: remove trusts the framework (ESX with ox_inventory lets bank go negative)"
+    },
+    {
+      "id": "B10",
+      "file": "server/v1.lua",
+      "find": "    if moved == amount then return true end\n",
+      "replace": "    if ok == true then return true end\n",
+      "why": "a money write trusts the adapter's true over the balance"
+    },
+    {
+      "id": "B11",
+      "file": "server/v1.lua",
+      "find": "        if ok == true then return false, 'refused' end\n        return false, refused or 'refused'\n",
+      "replace": "        return true\n",
+      "why": "a money write that moved nothing reads as done"
+    },
+    {
+      "id": "B12",
+      "file": "server/v1.lua",
+      "find": "if landed >= n then return true, nil, 0, slots end",
+      "replace": "do return true, nil, 0, slots end",
+      "why": "item add trusted without the count read-back"
+    },
+    {
+      "id": "B13",
+      "file": "server/v1.lua",
+      "find": "if stuck == 0 then return false, 'cannot_carry', 0 end",
+      "replace": "if stuck == 0 then return true end",
+      "why": "a partial add that was taken back reads true"
+    },
+    {
+      "id": "B14",
+      "file": "server/v1.lua",
+      "find": "    guard(inv.name .. '.remove', inv.remove, src, item, landed, slots)\n",
+      "replace": "",
+      "why": "a partial add is not taken back"
+    },
+    {
+      "id": "B15",
+      "file": "server/v1.lua",
+      "find": "    if before < n then return false, 'insufficient_items' end\n",
+      "replace": "",
+      "why": "remove runs with too few items"
+    },
+    {
+      "id": "B16",
+      "file": "server/v1.lua",
+      "find": "if gone >= n then return true end",
+      "replace": "do return true end",
+      "why": "item remove trusted without the count read-back"
+    },
+    {
+      "id": "B17",
+      "file": "server/v1.lua",
+      "find": "    local carry, cannot = canCarry(src, item, n)\n    if not carry then return false, cannot end\n",
+      "replace": "",
+      "why": "AddItem skips the carry check"
+    },
+    {
+      "id": "B18",
+      "file": "server/v1.lua",
+      "find": "        local carry, cannot = canCarry(src, l.item, l.count)\n        if not carry then return false, cannot end\n",
+      "replace": "",
+      "why": "Purchase charges before checking every line fits"
+    },
+    {
+      "id": "B19",
+      "file": "server/v1.lua",
+      "find": "kept = kept + (stuck or 0) * l.price",
+      "replace": "kept = kept",
+      "why": "stuck units are refunded: free items"
+    },
+    {
+      "id": "B20",
+      "file": "server/v1.lua",
+      "find": "            kept = kept + (l.count - gone) * l.price\n",
+      "replace": "",
+      "why": "a line that cannot be taken back is refunded too: free items"
+    },
+    {
+      "id": "B21",
+      "file": "server/v1.lua",
+      "find": "return false, 'refund_failed'",
+      "replace": "return false, 'refused'",
+      "why": "a failed refund is reported as an ordinary refusal"
+    },
+    {
+      "id": "B22",
+      "file": "server/v1.lua",
+      "find": "local back, _, unknown = addMoney(src, accountName, refund, 'cis_bridge refund')",
+      "replace": "local back, unknown = true, nil",
+      "why": "the refund is never paid"
+    },
+    {
+      "id": "B23",
+      "file": "server/v1.lua",
+      "find": "        if total > MAX_AMOUNT then return nil, 'bad_amount' end\n",
+      "replace": "",
+      "why": "order total is not bounded (integer overflow)"
+    },
+    {
+      "id": "B24",
+      "file": "server/v1.lua",
+      "find": "if not isInt(l.price, 0, MAX_AMOUNT) then return nil, 'bad_amount' end",
+      "replace": "if not isInt(l.price, -MAX_AMOUNT, MAX_AMOUNT) then return nil, 'bad_amount' end",
+      "why": "a negative price pays the player"
+    },
+    {
+      "id": "B25",
+      "file": "server/v1.lua",
+      "find": " or #lines > MAX_LINES",
+      "replace": "",
+      "why": "order lines are not bounded"
+    },
+    {
+      "id": "B26",
+      "file": "server/v1.lua",
+      "find": "return locked(src, purchase, order)",
+      "replace": "return purchase(src, order)",
+      "why": "Purchase runs without the lock"
+    },
+    {
+      "id": "B27",
+      "file": "server/v1.lua",
+      "find": "local res = table.pack(pcall(fn, ...))",
+      "replace": "local res = table.pack(true, fn(...))",
+      "why": "an adapter raise escapes the export"
+    },
+    {
+      "id": "B28",
+      "file": "server/v1.lua",
+      "find": "    if exists ~= true then return false, missing or 'unknown_job' end\n",
+      "replace": "",
+      "why": "SetJob skips the job-exists check"
+    },
+    {
+      "id": "B29",
+      "file": "server/v1.lua",
+      "find": "if not isInt(grade, 0, 100) then return false, 'bad_grade' end",
+      "replace": "if not isInt(grade, -100, 100) then return false, 'bad_grade' end",
+      "why": "a negative grade passes"
+    },
+    {
+      "id": "B30",
+      "file": "server/v1.lua",
+      "find": "    if not KINDS[kind] then return false, 'bad_message' end\n",
+      "replace": "",
+      "why": "Notify passes an unknown kind"
+    },
+    {
+      "id": "B31",
+      "file": "server/v1.lua",
+      "find": " and item:match('^[%w_%-%.]+$') ~= nil",
+      "replace": "",
+      "why": "item names are not pattern-checked"
+    },
+    {
+      "id": "B32",
+      "file": "server/v1.lua",
+      "find": "\n            and not (name == 'qbcore' and not forced and started('qbx_core'))\n            and probe(a) then",
+      "replace": "\n            and probe(a) then",
+      "why": "Qbox detected as QBCore"
+    },
+    {
+      "id": "B33",
+      "file": "server/v1.lua",
+      "find": "                if fw ~= adapter then return end\n",
+      "replace": "",
+      "why": "an inactive framework's events are re-emitted"
+    },
+    {
+      "id": "B34",
+      "file": "server/v1.lua",
+      "find": "    replyWanted[src] = nil\n    if not loaded[src] then return end\n",
+      "replace": "    replyWanted[src] = nil\n    busy[src] = nil\n    if not loaded[src] then return end\n",
+      "why": "a logout frees the lock of a write still in flight"
+    },
+    {
+      "id": "B35",
+      "file": "server/v1.lua",
+      "find": "    if watched then detected = false end\n",
+      "replace": "",
+      "why": "a framework restart is not re-detected"
+    },
+    {
+      "id": "B36",
+      "file": "server/v1.lua",
+      "find": "    if type(isLocked) ~= 'boolean' then return false, 'bad_door' end\n",
+      "replace": "",
+      "why": "SetDoorLock takes a non-boolean state"
+    },
+    {
+      "id": "B37",
+      "file": "server/v1.lua",
+      "find": "    return math.floor(bal)\n",
+      "replace": "    return bal\n",
+      "why": "GetMoney answers a fraction"
+    },
+    {
+      "id": "B38",
+      "file": "server/v1.lua",
+      "find": "    moneyInconsistent(src, label .. '_money', name, amount, moved)\n    return false, 'error', true\n",
+      "replace": "    return true\n",
+      "why": "a money write that moved the wrong amount reads as done"
+    },
+    {
+      "id": "B39",
+      "file": "server/v1.lua",
+      "find": "    if src then busy[src] = nil end\n",
+      "replace": "",
+      "why": "a dropped player's lock survives"
+    },
+    {
+      "id": "B40",
+      "file": "server/v1.lua",
+      "find": "    if lastJob[src] == key then return end\n",
+      "replace": "",
+      "why": "a repeated job event re-fires jobChanged"
+    },
+    {
+      "id": "B41",
+      "file": "server/v1.lua",
+      "find": "    loaded = {}\n    lastJob = {}\n",
+      "replace": "    loaded = {}\n",
+      "why": "a re-detect keeps the last framework's job memory"
+    },
+    {
+      "id": "B42",
+      "file": "server/v1.lua",
+      "find": "    lastJob[src] = nil\n",
+      "replace": "",
+      "why": "a dropped id keeps its last job: the next player's first job is swallowed"
+    },
+    {
+      "id": "A07",
+      "file": "init.lua",
+      "find": "            return false, 'error'\n        end\n",
+      "replace": "        end\n",
+      "why": "a raise across the facade answers the error text"
+    },
+    {
+      "id": "A02",
+      "file": "adapters/inventory/ox.lua",
+      "find": "RemoveItem(src, item, take, nil, s.slot, true)",
+      "replace": "RemoveItem(src, item, take)",
+      "why": "ox take-back removes from any slot of that item"
+    },
+    {
+      "id": "A03",
+      "file": "server/v1.lua",
+      "find": "inv.remove, src, l.item, l.count, d.slots)",
+      "replace": "inv.remove, src, l.item, l.count)",
+      "why": "the purchase take-back drops the slots"
+    },
+    {
+      "id": "A04",
+      "file": "init.lua",
+      "find": "        if GetResourceState('cis_bridge') ~= 'started' then return false, 'no_bridge' end\n",
+      "replace": "",
+      "why": "the facade does not answer no_bridge"
+    },
+    {
+      "id": "A05",
+      "file": "adapters/target/ox.lua",
+      "find": "onSelect(data and data.entity)",
+      "replace": "onSelect(data)",
+      "why": "ox onSelect gets the data table, not the entity"
+    },
+    {
+      "id": "A06",
+      "file": "adapters/inventory/ox.lua",
+      "find": "    if r == nil and not I.known(item) then return false, 'unknown_item' end\n",
+      "replace": "",
+      "why": "ox CanCarry hides an unknown item"
+    },
+    {
+      "id": "C01",
+      "file": "client/v1.lua",
+      "find": "        if not callable(o.onSelect) then return nil end\n",
+      "replace": "",
+      "why": "a target option with no onSelect is accepted"
+    },
+    {
+      "id": "C02",
+      "file": "client/v1.lua",
+      "find": "if t ~= 'vector3' and t ~= 'table' then return false end",
+      "replace": "if t ~= 'table' then return false end",
+      "why": "a real vector3 is refused (LuaGLM type)"
+    },
+    {
+      "id": "C03",
+      "file": "client/v1.lua",
+      "find": " or #options > MAX_OPTIONS",
+      "replace": "",
+      "why": "target options are not bounded"
+    },
+    {
+      "id": "R01",
+      "file": "server/v1.lua",
+      "find": "if not isInt(count, 1, MAX_COUNT) then return false, 'bad_count' end",
+      "replace": "if count ~= nil and not isInt(count, 1, MAX_COUNT) then return false, 'bad_count' end",
+      "why": "a missing count passes to the inventory"
+    },
+    {
+      "id": "R02",
+      "file": "server/v1.lua",
+      "find": "if not detected and not detecting and next(busy) == nil then runDetect() end",
+      "replace": "if not detected and not detecting then runDetect() end",
+      "why": "a write re-detects halfway and swaps adapters under itself"
+    },
+    {
+      "id": "R03",
+      "file": "server/v1.lua",
+      "find": " or bal == math.huge or bal == -math.huge",
+      "replace": "",
+      "why": "an infinite balance is read as money"
+    },
+    {
+      "id": "R04",
+      "file": "server/v1.lua",
+      "find": " or n ~= n or n == math.huge or n == -math.huge",
+      "replace": "",
+      "why": "a NaN or infinite item count is read"
+    },
+    {
+      "id": "R05",
+      "file": "server/v1.lua",
+      "find": "    if known == false and unknown == 'error' then return false, 'error' end\n",
+      "replace": "",
+      "why": "a raising item lookup answers unknown_item"
+    },
+    {
+      "id": "R06",
+      "file": "server/v1.lua",
+      "find": "local stuck = math.min(landed, math.max(0, now - before))",
+      "replace": "local stuck = math.max(0, now - before)",
+      "why": "stuck units count items that arrived from elsewhere"
+    },
+    {
+      "id": "R07",
+      "file": "server/v1.lua",
+      "find": "    -- Partial: no add-back.",
+      "replace": "    guard(inv.name .. '.add', inv.add, src, item, gone)\n    -- Partial: no add-back.",
+      "why": "a partial remove adds the rest back as fresh units, without their serial or durability"
+    },
+    {
+      "id": "R08",
+      "file": "server/v1.lua",
+      "find": "        if not back and unknown then return false, 'error' end\n",
+      "replace": "",
+      "why": "a refund that may have landed fires refundFailed"
+    },
+    {
+      "id": "R09",
+      "file": "server/v1.lua",
+      "find": "            anyStuck = true\n",
+      "replace": "",
+      "why": "a free line that stays answers the line's refusal, not partial"
+    },
+    {
+      "id": "R10",
+      "file": "server/v1.lua",
+      "find": "('%s|%s'):format(tostring(job.name), tostring(job.grade))",
+      "replace": "('%s|%s|%s'):format(tostring(job.name), tostring(job.grade), tostring(job.onDuty))",
+      "why": "every duty toggle fires jobChanged"
+    },
+    {
+      "id": "R11",
+      "file": "init.lua",
+      "find": "            print(('^1cis_bridge facade: %s raised: %s^7'):format(name, tostring(res[2])))\n",
+      "replace": "",
+      "why": "a raise across the facade is silent"
+    },
+    {
+      "id": "R12",
+      "file": "server/v1.lua",
+      "find": "    if busy[src] or detecting then return false, 'busy' end\n    ensure()\n",
+      "replace": "    if busy[src] or detecting then return false, 'busy' end\n",
+      "why": "a write never re-detects: only a read picks up a started inventory"
+    },
+    {
+      "id": "L01",
+      "file": "server/lib.lua",
+      "find": "local Shim = CisBridgeLibShim",
+      "replace": "local Shim = require 'shared.lib.shim'",
+      "why": "a shipped require: FiveM has no loader for it (live boot SCRIPT ERROR)"
+    },
+    {
+      "id": "L02",
+      "file": "fxmanifest.lua",
+      "find": "    'shared/lib/shim.lua',\n",
+      "replace": "",
+      "why": "the shim is not loaded: GetLibShim has nothing to export"
+    },
+    {
+      "id": "F01",
+      "file": "api.lua",
+      "find": "signature = '(src, item, n, metadata)'",
+      "replace": "signature = '(src, item, metadata, n)'",
+      "why": "a frozen export changes signature inside 1.x, in api.lua and the code at once",
+      "check": "frozen"
+    },
+    {
+      "id": "F02",
+      "file": "docs/V1.md",
+      "find": "Outcome: `partial`, `refused`, `refund_failed`, ",
+      "replace": "Outcome: `partial`, `refused`, ",
+      "why": "a frozen reason code drops out of the documented contract",
+      "check": "frozen"
+    },
+    {
+      "id": "F03",
+      "file": "docs/V1.md",
+      "find": "| `cis_bridge:refundFailed` | server | `(src, account, amount)` |",
+      "replace": "| `cis_bridge:refundFailedNotice` | server | `(src, account, amount)` |",
+      "why": "a frozen event is renamed in the contract",
+      "check": "frozen"
+    },
+    {
+      "id": "F04",
+      "file": "server/v1.lua",
+      "find": "    if busy[src] or detecting then return false, 'busy' end\n    ensure()\n",
+      "replace": "    if busy[src] or detecting then return false, 'in_use' end\n    ensure()\n",
+      "why": "the shipped Lua answers a reason code no product can find documented",
+      "check": "frozen"
+    },
+    {
+      "id": "V01",
+      "file": "server/v1.lua",
+      "find": "    if #plate < 1 or #plate > MAX_PLATE or plate:find('%c') then return false, 'bad_plate' end\n",
+      "replace": "",
+      "why": "any string reaches the framework as a plate"
+    },
+    {
+      "id": "V02",
+      "file": "server/v1.lua",
+      "find": "local MAX_PLATE = 15",
+      "replace": "local MAX_PLATE = 16",
+      "why": "a plate longer than GTA allows is looked up"
+    },
+    {
+      "id": "V03",
+      "file": "server/v1.lua",
+      "find": "    if id == nil or id == '' then return false, 'not_owned' end\n",
+      "replace": "",
+      "why": "a vehicle nobody owns answers nil, which truncates the return"
+    },
+    {
+      "id": "V04",
+      "file": "server/v1.lua",
+      "find": "plate = plate:match('^%s*(.-)%s*$')",
+      "replace": "plate = plate",
+      "why": "the padded plate GTA hands out is never found"
+    },
+    {
+      "id": "V05",
+      "file": "adapters/framework/common.lua",
+      "find": "GetCurrentResourceName(), true)",
+      "replace": "GetCurrentResourceName())",
+      "why": "the oxmysql scalar is not awaited"
+    },
+    {
+      "id": "V06",
+      "file": "adapters/framework/qbox.lua",
+      "find": "if GetResourceState('qbx_vehicles') ~= 'started' then return false, 'unsupported' end",
+      "replace": "",
+      "why": "a stopped qbx_vehicles raises instead of answering unsupported"
+    },
+    {
+      "id": "P01",
+      "file": "server/v1.lua",
+      "find": "    if sent ~= true then return false, reason or 'refused' end\n",
+      "replace": "",
+      "why": "the client is asked to save where the resource has nowhere to save"
+    },
+    {
+      "id": "P02",
+      "file": "server/v1.lua",
+      "find": "    if not appearance then return false, 'no_appearance' end\n",
+      "replace": "",
+      "why": "no clothing resource raises instead of answering no_appearance"
+    },
+    {
+      "id": "P03",
+      "file": "adapters/appearance/skinchanger.lua",
+      "find": "if skinExport('BeginSkinEdit') and exports.esx_skin:BeginSkinEdit(src) ~= true then",
+      "replace": "if false then",
+      "why": "older esx_skin refuses the save without an edit session"
+    },
+    {
+      "id": "P04",
+      "file": "adapters/appearance/qb_clothing.lua",
+      "find": "        for k, v in pairs(type(skin[key]) == 'table' and skin[key] or {}) do entry[k] = v end\n",
+      "replace": "",
+      "why": "qb-clothing drops each entry's stored defaults"
+    },
+    {
+      "id": "P05",
+      "file": "adapters/appearance/qb_clothing.lua",
+      "find": "    if GetResourceState('oxmysql') ~= 'started' then return false, 'unsupported' end\n",
+      "replace": "",
+      "why": "qb-clothing asks a save it has no database to write"
+    },
+    {
+      "id": "P06",
+      "file": "adapters/appearance/common.lua",
+      "find": "return { drawable = -1, texture = 0 }",
+      "replace": "return { drawable = drawable, texture = GetPedPropTextureIndex(ped, s.id) }",
+      "why": "a prop that is off reads texture -1"
+    },
+    {
+      "id": "P07",
+      "file": "adapters/appearance/common.lua",
+      "find": "    local lo = s.kind == 'prop' and -1 or 0",
+      "replace": "    local lo = -1",
+      "why": "a component at -1 reaches the native"
+    },
+    {
+      "id": "P08",
+      "file": "client/v1.lua",
+      "find": "        if mine == settleWait then TriggerEvent('cis_bridge:appearanceLoaded') end",
+      "replace": "        TriggerEvent('cis_bridge:appearanceLoaded')",
+      "why": "every load signal fires its own appearanceLoaded"
+    },
+    {
+      "id": "P09",
+      "file": "client/v1.lua",
+      "find": "    if type(a) ~= 'table' or not a.client or not started(a.resource) then return end",
+      "replace": "    if type(a) ~= 'table' or not a.client then return end",
+      "why": "an adapter not started is asked to save"
+    },
+    {
+      "id": "P10",
+      "file": "adapters/appearance/common.lua",
+      "find": "            ClearPedProp(ped, s.id)",
+      "replace": "            SetPedPropIndex(ped, s.id, data.drawable, texture, true)",
+      "why": "a prop set to off is written as -1 instead of cleared"
+    },
+    {
+      "id": "P11",
+      "file": "adapters/appearance/qb_clothing.lua",
+      "find": "    return type(v) == 'number' and v == v and v % 1 == 0 and v >= lo and v <= hi\n",
+      "replace": "    return type(v) == 'number' and v == v and v >= lo and v <= hi\n",
+      "why": "qb-clothing stores a float drawable"
+    },
+    {
+      "id": "P12",
+      "file": "adapters/appearance/qb_clothing.lua",
+      "find": "    if type(raw) ~= 'string' then return false, 'no_skin' end\n",
+      "replace": "    if type(raw) ~= 'string' then raw = json.encode({}) end\n",
+      "why": "qb-clothing saves clothes over no stored face"
+    },
+    {
+      "id": "P13",
+      "file": "adapters/appearance/qb_clothing.lua",
+      "find": "        local lo = part.kind == 'prop' and -1 or 0\n",
+      "replace": "        local lo = -2\n",
+      "why": "qb-clothing stores a prop below -1"
+    },
+    {
+      "id": "P14",
+      "file": "adapters/appearance/qb_clothing.lua",
+      "find": "    local texture = part.hair and GetPedHairColor(ped) or GetPedTextureVariation(ped, part.id)\n",
+      "replace": "    local texture = GetPedTextureVariation(ped, part.id)\n",
+      "why": "qb-clothing saves the hair texture in place of its colour"
+    },
+    {
+      "id": "P15",
+      "file": "server/v1.lua",
+      "find": "appearance.server.finish, src, data, (V1.getPlayer(src)))",
+      "replace": "appearance.server.finish, src, data)",
+      "why": "the reply is finished with no player, so nothing saves"
+    },
+    {
+      "id": "G01",
+      "file": "server/v1.lua",
+      "find": "    if not validItem(item) then return false, 'bad_item' end\n    if not validBlob(data)",
+      "replace": "    if not validBlob(data)",
+      "why": "UseItem accepts a non-string item"
+    },
+    {
+      "id": "G02",
+      "file": "server/v1.lua",
+      "find": "    if not validBlob(data) then return false, 'bad_data' end",
+      "replace": "    if false then return false, 'bad_data' end",
+      "why": "UseItem passes a non-table or unbounded data to the callback"
+    },
+    {
+      "id": "G03",
+      "file": "server/v1.lua",
+      "find": "    if usable ~= true then return false, usableWhy == 'error' and 'error' or 'not_usable' end",
+      "replace": "    if false then return false, 'not_usable' end",
+      "why": "the canUseItem gate is skipped, an unusable item is used"
+    },
+    {
+      "id": "G04",
+      "file": "server/v1.lua",
+      "find": "usableWhy == 'error' and 'error' or 'not_usable'",
+      "replace": "'not_usable'",
+      "why": "a canUseItem that raises answers not_usable, not error"
+    },
+    {
+      "id": "G05",
+      "file": "server/v1.lua",
+      "find": "usedWhy == 'not_usable' and 'not_usable' or 'error'",
+      "replace": "'error'",
+      "why": "a useItem answering not_usable is reported as error"
+    },
+    {
+      "id": "G06",
+      "file": "server/v1.lua",
+      "find": "lastStand = state.lastStand == true",
+      "replace": "lastStand = state.dead == true",
+      "why": "GetPlayerState lastStand reads the dead flag"
+    },
+    {
+      "id": "G07",
+      "file": "server/v1.lua",
+      "find": "isboss = gang.isboss }",
+      "replace": "isboss = false }",
+      "why": "GetGang drops isboss"
+    },
+    {
+      "id": "G08",
+      "file": "server/v1.lua",
+      "find": "    if type(gang) ~= 'table' then return false, 'not_loaded' end\n",
+      "replace": "",
+      "why": "a player with no gang table answers a bare nil"
+    },
+    {
+      "id": "G09",
+      "file": "server/v1.lua",
+      "find": "    if type(state) ~= 'table' then return false, 'not_loaded' end\n",
+      "replace": "",
+      "why": "a player with no metadata answers a bare nil"
+    },
+    {
+      "id": "G10",
+      "file": "adapters/framework/common.lua",
+      "find": "grade = math.floor(tonumber(grade.level) or tonumber(gang.grade) or 0),",
+      "replace": "grade = math.floor(tonumber(gang.grade) or 0),",
+      "why": "the gang grade is not read from grade.level"
+    },
+    {
+      "id": "G11",
+      "file": "adapters/framework/common.lua",
+      "find": "isboss = gang.isboss == true or grade.isboss == true,",
+      "replace": "isboss = gang.isboss == true,",
+      "why": "a boss flag carried on the grade is ignored"
+    },
+    {
+      "id": "G12",
+      "file": "adapters/framework/common.lua",
+      "find": "dead = meta.isdead == true,",
+      "replace": "dead = meta.isdead ~= nil,",
+      "why": "a present false isdead flag reads as dead"
+    },
+    {
+      "id": "G13",
+      "file": "adapters/framework/common.lua",
+      "find": "cuffed = meta.ishandcuffed == true,",
+      "replace": "cuffed = meta.ishandcuffed ~= nil,",
+      "why": "a present false ishandcuffed flag reads as cuffed"
+    },
+    {
+      "id": "G14",
+      "file": "adapters/framework/common.lua",
+      "find": "lastStand = meta.inlaststand == true,",
+      "replace": "lastStand = meta.isdead == true,",
+      "why": "last stand reads the dead flag"
+    },
+    {
+      "id": "G15",
+      "file": "adapters/framework/common.lua",
+      "find": "    out.name = item\n",
+      "replace": "",
+      "why": "the item table handed to the callback is not named for the item"
+    },
+    {
+      "id": "G16",
+      "file": "adapters/framework/common.lua",
+      "find": "{ 'func', 'cb', 'callback' }",
+      "replace": "{ 'func' }",
+      "why": "a usable entry that keeps its function under cb is not found"
+    },
+    {
+      "id": "G17",
+      "file": "adapters/framework/esx.lua",
+      "find": "return type(usable) == 'table' and usable[item] == true",
+      "replace": "return type(usable) == 'table'",
+      "why": "every item is usable when ESX lists any usable item"
+    },
+    {
+      "id": "G18",
+      "file": "adapters/framework/esx.lua",
+      "find": "if not Common.callable(ESX.GetUsableItems) then return true end",
+      "replace": "if not Common.callable(ESX.GetUsableItems) then return false end",
+      "why": "an ESX core without GetUsableItems can never use an item"
+    },
+    {
+      "id": "G19",
+      "file": "adapters/framework/esx.lua",
+      "find": "function S.gang() return false, 'unsupported' end",
+      "replace": "function S.gang() return {} end",
+      "why": "ESX answers a gang it does not have"
+    },
+    {
+      "id": "G20",
+      "file": "adapters/framework/cis_core.lua",
+      "find": "function S.state() return false, 'unsupported' end",
+      "replace": "function S.state() return nil end",
+      "why": "cis_core answers a bare nil for the player state"
+    },
+    {
+      "id": "G21",
+      "file": "adapters/framework/qbox.lua",
+      "find": "    fn(src, Common.qbItemTable(item, itemData))\n",
+      "replace": "    fn(src, itemData)\n",
+      "why": "Qbox hands the callback the raw data, not an item table"
+    },
+    {
+      "id": "G22",
+      "file": "adapters/framework/qbcore.lua",
+      "find": "    fn(src, Common.qbItemTable(item, data))\n",
+      "replace": "    fn(src, data)\n",
+      "why": "QBCore hands the callback the raw data, not an item table"
+    },
+    {
+      "id": "G23",
+      "file": "adapters/framework/esx.lua",
+      "find": "    ESX.UseItem(src, item, data)\n",
+      "replace": "    ESX.UseItem(src, item)\n",
+      "why": "ESX drops the data argument"
+    },
+    {
+      "id": "G24",
+      "file": "client/v1.lua",
+      "find": "    id = billInt(id, 1)\n",
+      "replace": "    id = billInt(id, 0)\n",
+      "why": "PayBill accepts id 0"
+    },
+    {
+      "id": "G25",
+      "file": "client/v1.lua",
+      "find": "    if reply[1] ~= true then return false, 'refused' end\n",
+      "replace": "    if not reply[1] then return false, 'refused' end\n",
+      "why": "a truthy non-true pay answer reads as paid"
+    },
+    {
+      "id": "G26",
+      "file": "client/v1.lua",
+      "find": "    while reply == nil and GetGameTimer() < deadline do Wait(BILLING_POLL_MS) end\n",
+      "replace": "    while reply == nil do Wait(BILLING_POLL_MS) end\n",
+      "why": "a silent billing resource hangs the caller forever"
+    },
+    {
+      "id": "G27",
+      "file": "client/v1.lua",
+      "find": "        if reply == nil then reply = table.pack(...) end\n",
+      "replace": "        reply = table.pack(...)\n",
+      "why": "a second reply overwrites the first"
+    },
+    {
+      "id": "G28",
+      "file": "client/v1.lua",
+      "find": "        if #items >= MAX_BILLS then\n",
+      "replace": "        if #items >= MAX_BILLS * 10 then\n",
+      "why": "a page is not capped at 100 rows"
+    },
+    {
+      "id": "G29",
+      "file": "client/v1.lua",
+      "find": "                items[#items + 1] = { id = id, label = row.label:sub(1, MAX_BILL_LABEL), amount = amount }\n",
+      "replace": "                items[#items + 1] = { id = id, label = row.label, amount = amount }\n",
+      "why": "a long label reaches the page uncut"
+    },
+    {
+      "id": "G30",
+      "file": "client/v1.lua",
+      "find": "            local amount = type(row.amount) == 'number' and row.amount <= MAX_BILL_AMOUNT\n",
+      "replace": "            local amount = type(row.amount) == 'number'\n",
+      "why": "an amount above 1e9 is kept"
+    },
+    {
+      "id": "G31",
+      "file": "server/v1.lua",
+      "find": "    if not inv and not configLines.inventory and fw and fw.inventory and probe(fw.inventory) then",
+      "replace": "    if not inv and fw and fw.inventory and probe(fw.inventory) then",
+      "why": "a mistyped inventory convar falls back to the ESX built-in inventory"
+    },
+    {
+      "id": "G32",
+      "file": "server/v1.lua",
+      "find": "        if said[convar] ~= line then print('^1' .. line .. '^7') end\n",
+      "replace": "",
+      "why": "a mistyped forcing convar is silent again"
+    },
+    {
+      "id": "G33",
+      "file": "server/v1.lua",
+      "find": "        elseif not started(a.resource) then\n            line =",
+      "replace": "        elseif false then\n            line =",
+      "why": "a forced adapter whose resource is stopped says nothing"
+    },
+    {
+      "id": "G34",
+      "file": "server/v1.lua",
+      "find": "        config = next(configLines) and configLines or nil,\n",
+      "replace": "",
+      "why": "the report loses the convar line and gives start-order advice"
+    },
+    {
+      "id": "G35",
+      "file": "client/v1.lua",
+      "find": "    if line and said[convar] ~= line then print('^1' .. line .. '^7') end\n",
+      "replace": "",
+      "why": "a mistyped target or billing convar is silent in F8"
+    },
+    {
+      "id": "G36",
+      "file": "server/report.lua",
+      "find": "        elseif type(wrong) == 'string' then",
+      "replace": "        elseif false then",
+      "why": "a wrong convar row shows the start-order fix instead of the cause"
+    },
+    {
+      "id": "G37",
+      "file": "server/v1.lua",
+      "find": "    if type(a) == 'table' and forced:sub(1, 2) ~= '__' then a.resource = renamed end",
+      "replace": "",
+      "why": "a server resource override never reaches the forced adapter"
+    },
+    {
+      "id": "G38",
+      "file": "server/v1.lua",
+      "find": "            a.resource = a.defaultResource\n",
+      "replace": "",
+      "why": "a renamed resource sticks after the convars are gone"
+    },
+    {
+      "id": "G39",
+      "file": "server/v1.lua",
+      "find": "    if not forced then\n        -- The hint lists every",
+      "replace": "    if false then\n        -- The hint lists every",
+      "why": "a server resource override without the forced name is ignored"
+    },
+    {
+      "id": "G40",
+      "file": "server/v1.lua",
+      "find": "    local forced, wrong = forcedName(CisBridgeFrameworks, 'cis_bridge:framework')\n    if wrong then return nil end",
+      "replace": "    local forced, wrong = forcedName(CisBridgeFrameworks, 'cis_bridge:framework')",
+      "why": "a wrong framework config still auto-detects"
+    },
+    {
+      "id": "G41",
+      "file": "server/v1.lua",
+      "find": "    local forced, wrong = forcedName(registry, convar)\n    if wrong then return nil end",
+      "replace": "    local forced, wrong = forcedName(registry, convar)",
+      "why": "a wrong slot config still auto-detects"
+    },
+    {
+      "id": "G42",
+      "file": "server/v1.lua",
+      "find": "        or renamed ~= '' and ('forced, resource renamed to ' .. renamed)\n",
+      "replace": "",
+      "why": "the summary hides that a resource was renamed"
+    },
+    {
+      "id": "G43",
+      "file": "client/v1.lua",
+      "find": "    if type(a) == 'table' and forced:sub(1, 2) ~= '__' then a.resource = renamed end",
+      "replace": "",
+      "why": "a client resource override never reaches the forced adapter"
+    },
+    {
+      "id": "G44",
+      "file": "client/v1.lua",
+      "find": "            a.resource = a.defaultResource\n",
+      "replace": "",
+      "why": "a renamed client resource sticks after the convars are gone"
+    },
+    {
+      "id": "G45",
+      "file": "client/v1.lua",
+      "find": "    if not forced then\n        -- The hint lists every",
+      "replace": "    if false then\n        -- The hint lists every",
+      "why": "a client resource override without the forced name is ignored"
+    },
+    {
+      "id": "G46",
+      "file": "client/v1.lua",
+      "find": "ipairs(wrongTarget and {} or ",
+      "replace": "ipairs(",
+      "why": "a wrong target config still auto-detects"
+    },
+    {
+      "id": "G47",
+      "file": "adapters/billing/esx_billing.lua",
+      "find": "    return type(esx) == 'table' and esx.resource or B.framework",
+      "replace": "    return B.framework",
+      "why": "esx_billing ignores a renamed ESX"
+    },
+    {
+      "id": "G48",
+      "file": "adapters/inventory/qb.lua",
+      "find": "common.qbShared(type(qb) == 'table' and qb.resource or 'qb-core')",
+      "replace": "common.qbShared('qb-core')",
+      "why": "qb-inventory item lookups ignore a renamed qb-core"
+    },
+    {
+      "id": "G49",
+      "file": "server/report.lua",
+      "find": "(type(why) == 'string' and why ~= 'auto') and why or 'detected'",
+      "replace": "'detected'",
+      "why": "the report hides how a slot was picked"
+    },
+    {
+      "id": "G50",
+      "file": "adapters/inventory/ox.lua",
+      "find": "    return tonumber((exports[I.resource]:GetItemCount(src, item)))",
+      "replace": "    return tonumber((exports.ox_inventory:GetItemCount(src, item)))",
+      "why": "ox item reads ignore a renamed ox_inventory"
+    },
+    {
+      "id": "G51",
+      "file": "adapters/framework/qbcore.lua",
+      "find": "        return exports[Adapter.resource]:GetPlayer(src)",
+      "replace": "        return exports['qb-core']:GetPlayer(src)",
+      "why": "qbcore player reads ignore a renamed qb-core"
+    },
+    {
+      "id": "G52",
+      "file": "adapters/framework/esx.lua",
+      "find": "        return exports[Adapter.resource]:getSharedObject()",
+      "replace": "        return exports.es_extended:getSharedObject()",
+      "why": "the ESX probe ignores a renamed es_extended"
+    },
+    {
+      "id": "G53",
+      "file": "client/v1.lua",
+      "find": "    applyResource(CisBridgeAppearances, 'cis_bridge:appearance', forcedLook ~= '' and forcedLook or nil)\n",
+      "replace": "",
+      "why": "a renamed appearance resource never reaches the client adapter"
+    },
+    {
+      "id": "G54",
+      "file": "client/v1.lua",
+      "find": "    if source == nil or source == '' then return end\n    ensure()\n",
+      "replace": "    if source == nil or source == '' then return end\n",
+      "why": "a save before any detect uses the default appearance resource"
+    },
+    {
+      "id": "G55",
+      "file": "fxmanifest.lua",
+      "find": "    'adapters/custom.lua',\n",
+      "replace": "",
+      "why": "the owner adapter file is never loaded"
+    },
+    {
+      "id": "G56",
+      "file": "fxmanifest.lua",
+      "find": "    'adapters/appearance/skinchanger.lua',\n    -- The owner's own adapters (empty as shipped). Shared scripts load first,\n    -- so this is after the framework and appearance adapters and before the\n    -- inventory, doors, target and billing ones; every registry is\n    -- `X = X or {}`, so an adapter under a new name survives them all.\n    'adapters/custom.lua',\n",
+      "replace": "    'adapters/custom.lua',\n    'adapters/appearance/skinchanger.lua',\n",
+      "why": "the owner adapter file loads before a built-in one it may copy"
+    },
+    {
+      "id": "G57",
+      "file": "server/v1.lua",
+      "find": ":format(convar, renamed, convar, convar, adapterNames(registry))",
+      "replace": ":format(convar, renamed, convar, convar, 'qbcore')",
+      "why": "the set-both hint names a framework for every slot"
+    },
+    {
+      "id": "G58",
+      "file": "client/v1.lua",
+      "find": ":format(convar, renamed, convar, convar, adapterNames(registry))",
+      "replace": ":format(convar, renamed, convar, convar, 'qbcore')",
+      "why": "the F8 set-both hint names a framework for every slot"
+    },
+    {
+      "id": "G59",
+      "file": "adapters/framework/esx.lua",
+      "find": "not Common.callable(ESX.GetPlayerFromId)",
+      "replace": "type(ESX.GetPlayerFromId) ~= 'function'",
+      "why": "an ESX player read through the export answers not_loaded (funcref)"
+    },
+    {
+      "id": "G61",
+      "file": "adapters/framework/esx.lua",
+      "find": "not Common.callable(ESX.GetJobs)",
+      "replace": "type(ESX.GetJobs) ~= 'function'",
+      "why": "every ESX job is unknown_job through the export (funcref)"
+    },
+    {
+      "id": "G62",
+      "file": "adapters/framework/esx.lua",
+      "find": "not Common.callable(ESX.GetItemLabel)",
+      "replace": "type(ESX.GetItemLabel) ~= 'function'",
+      "why": "ESX item labels are missing through the export (funcref)"
+    },
+    {
+      "id": "G63",
+      "file": "adapters/framework/esx.lua",
+      "find": "if Common.callable(ESX.IsPlayerLoaded)",
+      "replace": "if type(ESX.IsPlayerLoaded) == 'function'",
+      "why": "the ESX client loaded gate is skipped (funcref)"
+    },
+    {
+      "id": "G64",
+      "file": "adapters/billing/esx_billing.lua",
+      "find": "not Common.callable(ESX.TriggerServerCallback)",
+      "replace": "type(ESX.TriggerServerCallback) ~= 'function'",
+      "why": "esx_billing never detects through the export (funcref)"
+    },
+    {
+      "id": "G65",
+      "file": "adapters/framework/cis_core.lua",
+      "find": "Common.callable(fw.GetPlayer)",
+      "replace": "type(fw.GetPlayer) == 'function'",
+      "why": "the cis_core probe always fails through the export (funcref)"
+    },
+    {
+      "id": "G66",
+      "file": "adapters/target/qb.lua",
+      "find": "spec.coords, size.y, size.x, {",
+      "replace": "spec.coords, size.x, size.y, {",
+      "why": "a non-square qb-target box turns 90 degrees"
+    },
+    {
+      "id": "G68",
+      "file": "shared/lib/shim.lua",
+      "find": "if not callable(handler) then",
+      "replace": "if type(handler) ~= 'function' then",
+      "why": "the shim refuses a funcref callback handler"
+    },
+    {
+      "id": "G69",
+      "file": "server/conformance.lua",
+      "find": "if why == 'not_loaded' and V.frameworkHasPlayer and V.frameworkHasPlayer(src) == true then",
+      "replace": "if false then",
+      "why": "conformance not_loaded passes while the framework has the player"
+    },
+    {
+      "id": "G70",
+      "file": "adapters/framework/esx.lua",
+      "find": "return ESX ~= nil and ESX.GetPlayerFromId ~= nil and ESX.GetPlayerFromId(src) ~= nil",
+      "replace": "return false",
+      "why": "esx hasPlayer never sees a player"
+    },
+    {
+      "id": "G71",
+      "file": "init.lua",
+      "find": "'GetOwnedVehicleId', 'SaveAppearance', 'GetGang',",
+      "replace": "'GetOwnedVehicleId', 'GetGang',",
+      "why": "a facade name missing from the server list"
+    },
+    {
+      "id": "G72",
+      "file": "server/v1.lua",
+      "find": "                ensure()\n                if fw ~= adapter then return end",
+      "replace": "                if fw ~= adapter then return end",
+      "why": "the framework relay skips the re-detect"
+    },
+    {
+      "id": "G73",
+      "file": "server/v1.lua",
+      "find": "if before and not before[src] then loaded[src] = nil end",
+      "replace": "",
+      "why": "the re-detect seeding fakes a loaded player"
+    },
+    {
+      "id": "G74",
+      "file": "server/v1.lua",
+      "find": "            ensure()\n            if doors ~= adapter then return end",
+      "replace": "            if doors ~= adapter then return end",
+      "why": "the doors relay skips the re-detect"
+    },
+    {
+      "id": "G75",
+      "file": "adapters/inventory/qb.lua",
+      "find": "    if have < count then return false, 'refused' end",
+      "replace": "",
+      "why": "qb split removal runs a short plan"
+    },
+    {
+      "id": "G76",
+      "file": "adapters/inventory/qb.lua",
+      "find": "if res:RemoveItem(src, item, p[2], p[1], 'cis_bridge') ~= true then return false, 'refused' end",
+      "replace": "res:RemoveItem(src, item, p[2], p[1], 'cis_bridge')",
+      "why": "a refused qb slot reads as removed"
+    },
+    {
+      "id": "G77",
+      "file": "server/v1.lua",
+      "find": "    if not want then return end",
+      "replace": "    want = want or { name = name, expires = math.huge }",
+      "why": "an unasked appearance reply is saved"
+    },
+    {
+      "id": "G78",
+      "file": "server/v1.lua",
+      "find": "want.expires < GetGameTimer()",
+      "replace": "false",
+      "why": "a late appearance reply is saved"
+    },
+    {
+      "id": "G79",
+      "file": "adapters/appearance/skinchanger.lua",
+      "find": "if not Common.valid(slot, { drawable = drawable, texture = texture }) then return false, 'bad_clothing' end",
+      "replace": "",
+      "why": "bad clothing values reach SaveOutfit"
+    },
+    {
+      "id": "G80",
+      "file": "adapters/appearance/skinchanger.lua",
+      "find": "    if sent ~= true then return false, 'refused' end",
+      "replace": "",
+      "why": "a refused SaveOutfit reads as saved"
+    },
+    {
+      "id": "G81",
+      "file": "adapters/appearance/skinchanger.lua",
+      "find": "exports.esx_skin:BeginSkinEdit(src) ~= true then",
+      "replace": "false then",
+      "why": "a refused edit session reads as open"
+    },
+    {
+      "id": "G82",
+      "file": "server/v1.lua",
+      "find": "    replyWanted[src] = nil\n    if not loaded[src] then return end",
+      "replace": "    if not loaded[src] then return end",
+      "why": "a dropped player keeps a pending appearance reply"
+    },
+    {
+      "id": "G83",
+      "file": "server/v1.lua",
+      "find": "    inconsistent(src, 'remove', item, gone)\n",
+      "replace": "",
+      "why": "a partial remove fires no inconsistent"
+    },
+    {
+      "id": "G84",
+      "file": "client/v1.lua",
+      "find": "    if handle == false then return false, why or 'refused' end\n    records[key] = { name = key, owner = owner, via = target.resource, handle = handle }",
+      "replace": "    records[key] = { name = key, owner = owner, via = target.resource, handle = handle }",
+      "why": "a refused target zone is recorded and answers true"
+    },
+    {
+      "id": "G85",
+      "file": "server/v1.lua",
+      "find": "    probeFailed(convar, forced, forced and registry and registry[forced])\n",
+      "replace": "",
+      "why": "a forced adapter whose probe fails says nothing"
+    },
+    {
+      "id": "G86",
+      "file": "client/v1.lua",
+      "find": "    probeLine('cis_bridge:target', forcedTarget, CisBridgeTargets, target)\n",
+      "replace": "",
+      "why": "a forced target whose probe fails says nothing on F8"
+    },
+    {
+      "id": "G87",
+      "file": "server/v1.lua",
+      "find": "    grade = math.tointeger(grade)\n",
+      "replace": "",
+      "why": "a whole float grade is unknown on ESX and QBCore"
+    },
+    {
+      "id": "H01",
+      "file": "adapters/framework/esx.lua",
+      "find": "Common.callable(p.getName) and p.getName()",
+      "replace": "type(p.getName) == 'function' and p.getName()",
+      "why": "a funcref xPlayer:getName is skipped and the name falls back to p.name"
+    },
+    {
+      "id": "H02",
+      "file": "adapters/framework/esx.lua",
+      "find": "local job = Common.callable(p.getJob)",
+      "replace": "local job = type(p.getJob) == 'function'",
+      "why": "a funcref xPlayer:getJob is skipped in GetPlayer"
+    },
+    {
+      "id": "H03",
+      "file": "adapters/framework/esx.lua",
+      "find": "return normaliseJob(Common.callable(p.getJob)",
+      "replace": "return normaliseJob(type(p.getJob) == 'function'",
+      "why": "a funcref xPlayer:getJob is skipped in GetJob"
+    },
+    {
+      "id": "H04",
+      "file": "shared/lib/shim.lua",
+      "find": "        if callable(delay) then\n",
+      "replace": "        if type(delay) == 'function' then\n",
+      "why": "a funcref continuation in the await delay slot is not run"
+    },
+    {
+      "id": "H05",
+      "file": "shared/lib/shim.lua",
+      "find": "elseif callable(target) then",
+      "replace": "elseif type(target) == 'function' then",
+      "why": "a funcref continuation in the await target slot is not run"
+    },
+    {
+      "id": "H06",
+      "file": "shared/lib/shim.lua",
+      "find": "        if not callable(cb) then\n            cb = function() end",
+      "replace": "        if type(cb) ~= 'function' then\n            cb = function() end",
+      "why": "send drops a funcref continuation"
+    },
+    {
+      "id": "H07",
+      "file": "shared/lib/shim.lua",
+      "find": "        if callable(cb) then\n            -- The legacy form",
+      "replace": "        if cb then\n            -- The legacy form",
+      "why": "await calls a truthy non-callable fourth argument"
+    },
+    {
+      "id": "H08",
+      "file": "shared/lib/shim.lua",
+      "find": "function lib.zones.box() return false, NO_ZONES end",
+      "replace": "function lib.zones.box() error('No such export CreateZone') end",
+      "why": "a server box zone raises instead of refusing"
+    },
+    {
+      "id": "H09",
+      "file": "shared/lib/shim.lua",
+      "find": "function lib.zones.sphere() return false, NO_ZONES end",
+      "replace": "function lib.zones.sphere() error('No such export CreateZone') end",
+      "why": "a server sphere zone raises instead of refusing"
+    },
+    {
+      "id": "H10",
+      "file": "shared/lib/shim.lua",
+      "find": "function lib.zones.poly() return false, NO_ZONES end",
+      "replace": "function lib.zones.poly() error('No such export CreateZone') end",
+      "why": "a server poly zone raises instead of refusing"
+    },
+    {
+      "id": "H11",
+      "file": "shared/lib/shim.lua",
+      "find": "return { id = id, remove = refuse, contains = refuse }",
+      "replace": "return { id = id, remove = function() error('No such export RemoveZone') end, contains = refuse }",
+      "why": "a server zone handle remove raises"
+    },
+    {
+      "id": "H12",
+      "file": "shared/lib/shim.lua",
+      "find": "return { id = id, remove = refuse, contains = refuse }",
+      "replace": "return { id = id, remove = refuse, contains = function() error('No such export ZoneContains') end }",
+      "why": "a server zone handle contains raises"
+    },
+    {
+      "id": "H13",
+      "file": "shared/lib/shim.lua",
+      "find": "if type(id) ~= 'string' then return false, NO_ZONES end",
+      "replace": "",
+      "why": "lib.zone wraps a non-string id"
+    },
+    {
+      "id": "Q01",
+      "file": "shared/lib/shim.lua",
+      "find": "            cb = function() end\n",
+      "replace": "",
+      "why": "send with no cb hands cis_libs no continuation, and the call is dropped"
+    },
+    {
+      "id": "Q02",
+      "file": "shared/lib/shim.lua",
+      "find": "        if type(id) ~= 'string' then return false, NO_ZONES end\n",
+      "replace": "        if type(id) ~= 'string' then return nil end\n",
+      "why": "lib.zone with no string id answers a bare nil"
+    },
+    {
+      "id": "Q03",
+      "file": "client/v1.lua",
+      "find": "        if labels[o.label] then return nil end\n",
+      "replace": "",
+      "why": "two options with one label reach qb-target, which keeps only the second"
+    },
+    {
+      "id": "Q04",
+      "file": "adapters/framework/common.lua",
+      "find": "    if r.err ~= nil and r.err ~= '' then return false, 'error' end\n",
+      "replace": "",
+      "why": "a failed plate query answers not_owned"
+    },
+    {
+      "id": "Q05",
+      "file": "adapters/appearance/qb_clothing.lua",
+      "find": "    if raw == false then return false, 'error' end\n",
+      "replace": "",
+      "why": "a failed skin read answers no_skin"
+    },
+    {
+      "id": "Q06",
+      "file": "adapters/framework/common.lua",
+      "find": "    if hit then return hit end\n",
+      "replace": "",
+      "why": "QBCore.Shared is copied on every lookup"
+    },
+    {
+      "id": "Q07",
+      "file": "adapters/framework/common.lua",
+      "find": "AddEventHandler('QBCore:Server:UpdateObject', function() sharedCache = {} end)\n",
+      "replace": "",
+      "why": "a job or item added at runtime is never seen"
+    },
+    {
+      "id": "Z01",
+      "file": "adapters/framework/esx.lua",
+      "find": "tonumber((ESX.GetPlayerIdFromIdentifier(charId)))",
+      "replace": "tonumber(ESX.GetPlayerIdFromIdentifier(charId))",
+      "why": "an offline ESX character answers error, not offline"
+    },
+    {
+      "id": "Z02",
+      "file": "adapters/framework/qbox.lua",
+      "find": "tonumber((exports[Adapter.resource]:GetMoney(src, account)))",
+      "replace": "tonumber(exports[Adapter.resource]:GetMoney(src, account))",
+      "why": "a nil Qbox balance raises"
+    },
+    {
+      "id": "Z03",
+      "file": "adapters/framework/qbox.lua",
+      "find": "tonumber((exports.qbx_vehicles:GetVehicleIdByPlate(plate)))",
+      "replace": "tonumber(exports.qbx_vehicles:GetVehicleIdByPlate(plate))",
+      "why": "a plate nobody owns answers error, not not_owned"
+    },
+    {
+      "id": "Z04",
+      "file": "adapters/framework/qbcore.lua",
+      "find": "tonumber((p.Functions.GetMoney(account)))",
+      "replace": "tonumber(p.Functions.GetMoney(account))",
+      "why": "a nil QBCore balance raises"
+    },
+    {
+      "id": "Z05",
+      "file": "adapters/inventory/ox.lua",
+      "find": "tonumber((exports[I.resource]:GetItemCount(src, item)))",
+      "replace": "tonumber(exports[I.resource]:GetItemCount(src, item))",
+      "why": "a nil ox_inventory count raises"
+    },
+    {
+      "id": "Z06",
+      "file": "adapters/inventory/codem.lua",
+      "find": "tonumber((exports[I.resource]:GetItemsTotalAmount(src, item)))",
+      "replace": "tonumber(exports[I.resource]:GetItemsTotalAmount(src, item))",
+      "why": "a nil codem count raises"
+    },
+    {
+      "id": "Z07",
+      "file": "adapters/inventory/qs.lua",
+      "find": "tonumber((qs[totalFn](qs, src, item)))",
+      "replace": "tonumber(qs[totalFn](qs, src, item))",
+      "why": "a nil qs count raises"
+    },
+    {
+      "id": "Z08",
+      "file": "adapters/inventory/cis_inventory.lua",
+      "find": "type((exports[I.resource]:GetItem(item)))",
+      "replace": "type(exports[I.resource]:GetItem(item))",
+      "why": "a nil cis_inventory item answer raises"
+    },
+    {
+      "id": "Z09",
+      "file": "server/v1.lua",
+      "find": "    if detecting or next(busy) ~= nil then return false, 'busy' end\n",
+      "replace": "    if detecting then return false, 'busy' end\n",
+      "why": "conformance re-detection must wait while a write is in flight"
+    },
+    {
+      "id": "Z10",
+      "file": "server/conformance.lua",
+      "find": "pcall(V.redetect)",
+      "replace": "pcall(V.detect)",
+      "why": "conformance detects through the busy gate, not around it"
+    },
+    {
+      "id": "Z11",
+      "file": "shared/lib/shim.lua",
+      "find": "        return engine:CallCallback(name, cb, ...)\n    end\n\n    -- ------------------------------------------------------------------\n    --  lib.zones",
+      "replace": "        engine:CallCallback(name, cb, ...)\n        return true\n    end\n\n    -- ------------------------------------------------------------------\n    --  lib.zones",
+      "why": "lib.callback.call hides a refusal from CallCallback"
+    },
+    {
+      "id": "Z12",
+      "file": "server/conformance.lua",
+      "find": "target < 1 or target > 65535",
+      "replace": "target < 1",
+      "why": "a server id above 65535 reaches the %d format"
+    },
+    {
+      "id": "Z13",
+      "file": "server/conformance.lua",
+      "find": "local target = math.tointeger(tonumber(args[3]))",
+      "replace": "local target = tonumber(args[3])",
+      "why": "a fractional server id is accepted"
+    },
+    {
+      "id": "V07",
+      "file": "server/v1.lua",
+      "find": "    if busy[src] or detecting then return false, 'busy' end\n",
+      "replace": "    if busy[src] then return false, 'busy' end\n",
+      "why": "a write runs while a detect is suspended"
+    },
+    {
+      "id": "V08",
+      "file": "server/v1.lua",
+      "find": "    if not detected and not detecting and next(busy) == nil then runDetect() end\n",
+      "replace": "    if not detected and next(busy) == nil then runDetect() end\n",
+      "why": "a second caller starts a detect inside a suspended one"
+    },
+    {
+      "id": "V09",
+      "file": "server/v1.lua",
+      "find": "    if detecting or next(busy) ~= nil then return false, 'busy' end\n",
+      "replace": "    if next(busy) ~= nil then return false, 'busy' end\n",
+      "why": "a conformance re-detect runs inside a suspended detect"
+    },
+    {
+      "id": "V10",
+      "file": "server/v1.lua",
+      "find": "plate = tostring(math.tointeger(plate) or plate)",
+      "replace": "plate = tostring(plate)",
+      "why": "a whole float plate 123.0 is looked up as \"123.0\""
+    },
+    {
+      "id": "Q08",
+      "file": "shared/lib/shim.lua",
+      "find": "        if type(id) ~= 'string' then return false, NO_ZONES end\n",
+      "replace": "        if type(id) ~= 'string' then return false end\n",
+      "why": "lib.zone with no string id gives no reason"
+    },
+    {
+      "id": "S01",
+      "file": "server/v1.lua",
+      "find": "    if kind == 'inform' then kind = 'info' end\n",
+      "replace": "",
+      "why": "Notify refuses cis_vehicleshop's 'inform' kind, so its toast is dropped"
+    }
+  ]
+}

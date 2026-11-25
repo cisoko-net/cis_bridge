@@ -1,0 +1,206 @@
+{
+  "$comment": "The public surface frozen for this major. tools/check-frozen.js compares the source against it; rewrite it only for a new major, with --write.",
+  "major": 1,
+  "exports": {
+    "AddItem": {
+      "realm": "server",
+      "signature": "(src, item, n, metadata)"
+    },
+    "AddMoney": {
+      "realm": "server",
+      "signature": "(src, accountName, amount, reason)"
+    },
+    "AddTargetEntity": {
+      "realm": "client",
+      "signature": "(spec)"
+    },
+    "AddTargetZone": {
+      "realm": "client",
+      "signature": "(spec)"
+    },
+    "ApplyClothing": {
+      "realm": "client",
+      "signature": "(slot, data)"
+    },
+    "CanCarry": {
+      "realm": "server",
+      "signature": "(src, item, n)"
+    },
+    "GetAppearanceComponent": {
+      "realm": "client",
+      "signature": "(slot)"
+    },
+    "GetBills": {
+      "realm": "client",
+      "signature": "(after)"
+    },
+    "GetBridgeReport": {
+      "realm": "server",
+      "signature": "()"
+    },
+    "GetConformanceResults": {
+      "realm": "server",
+      "signature": "()"
+    },
+    "GetDoorLock": {
+      "realm": "server",
+      "signature": "(id)"
+    },
+    "GetGang": {
+      "realm": "server",
+      "signature": "(src)"
+    },
+    "GetItemCount": {
+      "realm": "server",
+      "signature": "(src, item)"
+    },
+    "GetJob": {
+      "realm": "server",
+      "signature": "(src)"
+    },
+    "GetMoney": {
+      "realm": "server",
+      "signature": "(src, accountName)"
+    },
+    "GetOwnedVehicleId": {
+      "realm": "server",
+      "signature": "(plate)"
+    },
+    "GetPlayer": {
+      "realm": "server",
+      "signature": "(src)"
+    },
+    "GetPlayerData": {
+      "realm": "client",
+      "signature": "()"
+    },
+    "GetPlayerState": {
+      "realm": "server",
+      "signature": "(src)"
+    },
+    "GetSourceByCharId": {
+      "realm": "server",
+      "signature": "(charId)"
+    },
+    "GetSummary": {
+      "realm": "server",
+      "signature": "()"
+    },
+    "HasBilling": {
+      "realm": "client",
+      "signature": "()"
+    },
+    "IsLoaded": {
+      "realm": "both",
+      "signature": {
+        "server": "(src)",
+        "client": "()"
+      }
+    },
+    "Notify": {
+      "realm": "both",
+      "signature": {
+        "server": "(src, message, kind)",
+        "client": "(message, kind)"
+      }
+    },
+    "PayBill": {
+      "realm": "client",
+      "signature": "(id)"
+    },
+    "Purchase": {
+      "realm": "server",
+      "signature": "(src, order)"
+    },
+    "RemoveItem": {
+      "realm": "server",
+      "signature": "(src, item, n)"
+    },
+    "RemoveMoney": {
+      "realm": "server",
+      "signature": "(src, accountName, amount, reason)"
+    },
+    "RemoveTarget": {
+      "realm": "client",
+      "signature": "(name)"
+    },
+    "RunConformance": {
+      "realm": "server",
+      "signature": "()"
+    },
+    "SaveAppearance": {
+      "realm": "server",
+      "signature": "(src)"
+    },
+    "SetDoorLock": {
+      "realm": "server",
+      "signature": "(id, isLocked)"
+    },
+    "SetJob": {
+      "realm": "server",
+      "signature": "(src, name, grade)"
+    },
+    "UseItem": {
+      "realm": "server",
+      "signature": "(src, item, data)"
+    }
+  },
+  "events": [
+    "cis_bridge:appearanceLoaded",
+    "cis_bridge:doorChanged",
+    "cis_bridge:inconsistent",
+    "cis_bridge:jobChanged",
+    "cis_bridge:playerLoaded",
+    "cis_bridge:playerUnloaded",
+    "cis_bridge:refundFailed"
+  ],
+  "reasons": [
+    "bad_account",
+    "bad_amount",
+    "bad_clothing",
+    "bad_count",
+    "bad_cursor",
+    "bad_data",
+    "bad_door",
+    "bad_grade",
+    "bad_id",
+    "bad_item",
+    "bad_job",
+    "bad_message",
+    "bad_metadata",
+    "bad_order",
+    "bad_plate",
+    "bad_slot",
+    "bad_source",
+    "bad_target",
+    "busy",
+    "cannot_carry",
+    "error",
+    "exists",
+    "failed",
+    "insufficient_funds",
+    "insufficient_items",
+    "no_appearance",
+    "no_billing",
+    "no_bridge",
+    "no_doors",
+    "no_framework",
+    "no_inventory",
+    "no_skin",
+    "no_target",
+    "not_loaded",
+    "not_owned",
+    "not_usable",
+    "offline",
+    "partial",
+    "refund_failed",
+    "refused",
+    "timeout",
+    "unknown_door",
+    "unknown_grade",
+    "unknown_item",
+    "unknown_job",
+    "unknown_target",
+    "unsupported"
+  ]
+}
